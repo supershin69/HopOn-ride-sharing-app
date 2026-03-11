@@ -191,10 +191,59 @@ const getMyVerification = async (req, res) => {
   }
 };
 
+const registerPushToken = [
+  body('token').isString().notEmpty(),
+  body('platform').optional().isIn(['android', 'ios', 'web']),
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+
+    try {
+      const user = await User.findById(req.user.id);
+      if (!user) return res.status(404).json({ message: 'User not found' });
+
+      const token = String(req.body.token).trim();
+      const existingTokens = Array.isArray(user.fcm_tokens) ? user.fcm_tokens : [];
+      const nextTokens = [token, ...existingTokens.filter((item) => item !== token)].slice(0, 5);
+      user.fcm_tokens = nextTokens;
+      user.updated_at = new Date();
+      await user.save();
+
+      return res.json({ message: 'Push token registered' });
+    } catch (error) {
+      return res.status(500).json({ message: 'Failed to register push token', error: error.message });
+    }
+  }
+];
+
+const removePushToken = [
+  body('token').isString().notEmpty(),
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+
+    try {
+      const user = await User.findById(req.user.id);
+      if (!user) return res.status(404).json({ message: 'User not found' });
+
+      const token = String(req.body.token).trim();
+      user.fcm_tokens = (user.fcm_tokens || []).filter((item) => item !== token);
+      user.updated_at = new Date();
+      await user.save();
+
+      return res.json({ message: 'Push token removed' });
+    } catch (error) {
+      return res.status(500).json({ message: 'Failed to remove push token', error: error.message });
+    }
+  }
+];
+
 module.exports = {
   getUser,
   updateUser,
   getUserFeedback,
   submitMyVerification,
-  getMyVerification
+  getMyVerification,
+  registerPushToken,
+  removePushToken
 };

@@ -65,6 +65,7 @@ import com.google.android.libraries.places.api.model.AutocompletePrediction
 import com.tritech.hopon.R
 import com.tritech.hopon.data.network.NetworkService
 import com.tritech.hopon.databinding.ActivityMapsBinding
+import com.tritech.hopon.notifications.PushTokenRegistrar
 import com.tritech.hopon.ui.auth.LoginActivity
 import com.tritech.hopon.ui.components.hopOnComposeTheme
 import com.tritech.hopon.ui.rideDiscovery.components.MapsBottomNavAction
@@ -146,6 +147,7 @@ class RootHostActivity : AppCompatActivity(), MapsView, OnMapReadyCallback {
     companion object {
         private const val TAG = "RootHostActivity"
         private const val LOCATION_PERMISSION_REQUEST_CODE = 999
+        private const val NOTIFICATION_PERMISSION_REQUEST_CODE = 2002
         private const val PLACE_REQUEST_CODE = 2001
         private const val EXTRA_OPEN_RIDE_IN_PROCESS = "extra_open_ride_in_process"
         private const val RIDE_ONGOING_CHANNEL_ID = "ride_ongoing_channel"
@@ -417,6 +419,7 @@ class RootHostActivity : AppCompatActivity(), MapsView, OnMapReadyCallback {
 
         setUpClickListener()
         connectUserRealtimeEvents()
+        PushTokenRegistrar.syncCurrentToken(this)
         handleNavigationIntent(intent)
     }
 
@@ -1668,9 +1671,16 @@ class RootHostActivity : AppCompatActivity(), MapsView, OnMapReadyCallback {
             }
             val joinedRides = myBookings.mapNotNull { booking ->
                 val post = booking.post_id ?: return@mapNotNull null
-                post.toRideListItem(userLatLng, currentUserId).copy(
+                val normalizedStatus = normaliseBookingStatus(booking.status)
+                val baseRide = post.toRideListItem(userLatLng, currentUserId)
+                val lifecycleOverride = when (normalizedStatus) {
+                    "cancelled", "rejected" -> RideLifecycleStatus.CANCELLED
+                    else -> baseRide.lifecycleStatus
+                }
+                baseRide.copy(
                     bookingId = booking.id,
-                    bookingStatus = normaliseBookingStatus(booking.status)
+                    bookingStatus = normalizedStatus,
+                    lifecycleStatus = lifecycleOverride
                 )
             }
 
@@ -3051,6 +3061,7 @@ class RootHostActivity : AppCompatActivity(), MapsView, OnMapReadyCallback {
 
     private fun logoutAndNavigateToLogin() {
         // Clear login state and reset task stack to auth screen.
+        PushTokenRegistrar.unregisterToken(this)
         SessionManager.setLoggedIn(this, false)
         startActivity(Intent(this, LoginActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
@@ -3399,8 +3410,25 @@ class RootHostActivity : AppCompatActivity(), MapsView, OnMapReadyCallback {
         activeCreateRideField = null
     }
 
+    private fun maybeRequestNotificationsPermission() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+        if (
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+            == PackageManager.PERMISSION_GRANTED
+        ) {
+            return
+        }
+        ActivityCompat.requestPermissions(
+            this,
+            arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+            NOTIFICATION_PERMISSION_REQUEST_CODE
+        )
+    }
+
     override fun onStart() {
         super.onStart()
+
+        maybeRequestNotificationsPermission()
 
         when {
             PermissionUtils.isAccessFineLocationGranted(this) -> {
@@ -3457,6 +3485,15 @@ class RootHostActivity : AppCompatActivity(), MapsView, OnMapReadyCallback {
                     Toast.makeText(
                         this,
                         getString(R.string.location_permission_not_granted),
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
+            NOTIFICATION_PERMISSION_REQUEST_CODE -> {
+                if (grantResults.isEmpty() || grantResults[0] != PackageManager.PERMISSION_GRANTED) {
+                    Toast.makeText(
+                        this,
+                        getString(R.string.notification_permission_denied),
                         Toast.LENGTH_LONG
                     ).show()
                 }

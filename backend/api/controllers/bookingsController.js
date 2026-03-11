@@ -2,6 +2,7 @@ const { v4: uuidv4 } = require('uuid');
 const Booking = require('../models/Booking');
 const CarpoolPost = require('../models/CarpoolPost');
 const { validationResult } = require('express-validator');
+const { sendToUsers } = require('../services/pushNotifications');
 
 const CANCEL_CUTOFF_MINUTES = 30;
 const PICKUP_STATUS_NOT_ARRIVED = 'not_arrived';
@@ -30,6 +31,19 @@ const hasRideDeparted = (departureTime) => {
   if (Number.isNaN(departureEpoch)) return false;
   // Allow booking up to meetup time inclusive; block only after departure.
   return Date.now() > departureEpoch;
+};
+
+const buildBookingStatusNotification = (status) => {
+  switch (status) {
+    case 'confirmed':
+      return { title: 'Booking confirmed', body: 'Your booking request was accepted.' };
+    case 'rejected':
+      return { title: 'Booking declined', body: 'Your booking request was declined.' };
+    case 'cancelled':
+      return { title: 'Booking cancelled', body: 'A booking on your ride was cancelled.' };
+    default:
+      return { title: 'Booking update', body: 'Your booking status was updated.' };
+  }
 };
 
 const emitRideEvent = (req, postMongoId, eventName, payload) => {
@@ -154,6 +168,22 @@ const requestBooking = async (req, res) => {
         seats_booked: booking.seats_booked
       });
     }
+
+    sendToUsers({
+      userIds: [post.driver_id.toString()],
+      excludeUserId: req.user.id,
+      notification: {
+        title: 'New booking request',
+        body: 'You received a new booking request.'
+      },
+      data: {
+        type: 'booking_requested',
+        booking_id: booking._id.toString(),
+        post_id: post._id.toString(),
+        post_uuid: post.post_id,
+        passenger_id: req.user.id
+      }
+    }).catch((error) => console.error('Push notification failed:', error.message));
     
     res.status(201).json(booking);
   } catch (error) {
@@ -203,6 +233,14 @@ const respondToBooking = async (req, res) => {
     emitRideEvent(req, post._id.toString(), 'booking_status_changed', statusPayload);
     emitUserEvent(req, booking.passenger_id.toString(), 'booking_status_changed', statusPayload);
     emitUserEvent(req, post.driver_id.toString(), 'booking_status_changed', statusPayload);
+
+    const notification = buildBookingStatusNotification(booking.status);
+    sendToUsers({
+      userIds: [booking.passenger_id.toString()],
+      excludeUserId: req.user.id,
+      notification,
+      data: { type: 'booking_status_changed', ...statusPayload }
+    }).catch((error) => console.error('Push notification failed:', error.message));
     res.json(booking);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -375,6 +413,14 @@ const cancelBooking = async (req, res) => {
     emitRideEvent(req, post._id.toString(), 'booking_cancelled', cancelledPayload);
     emitUserEvent(req, booking.passenger_id.toString(), 'booking_cancelled', cancelledPayload);
     emitUserEvent(req, post.driver_id.toString(), 'booking_cancelled', cancelledPayload);
+
+    const notification = buildBookingStatusNotification('cancelled');
+    sendToUsers({
+      userIds: [booking.passenger_id.toString(), post.driver_id.toString()],
+      excludeUserId: req.user.id,
+      notification,
+      data: { type: 'booking_cancelled', ...cancelledPayload }
+    }).catch((error) => console.error('Push notification failed:', error.message));
 
     // 5. If the booking was confirmed/accepted, return the seats to the post
     if (oldStatus === 'confirmed' || oldStatus === 'accepted') {

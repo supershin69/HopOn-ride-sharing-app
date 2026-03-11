@@ -6,15 +6,16 @@ val localProps = gradleLocalProperties(rootDir, providers)
 fun localProp(name: String): String? = localProps.getProperty(name)?.trim()
 
 val emulatorApiBaseUrl = localProp("apiBaseUrlEmulator")
-    ?: "http://10.0.2.2:5000/api/v1/"
+    ?: "http://10.0.2.2:3001/api/v1/"
 val deviceApiBaseUrl = localProp("apiBaseUrlDevice")
     ?: localProp("apiBaseUrl")
-    ?: "http://127.0.0.1:5000/api/v1/"
+    ?: "http://192.168.1.13:3001/api/v1/"
 
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -185,4 +186,9 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
+
+    // Firebase 
+    implementation(platform("com.google.firebase:firebase-bom:34.10.0"))
+    implementation("com.google.firebase:firebase-analytics")
+    implementation("com.google.firebase:firebase-messaging")
 }

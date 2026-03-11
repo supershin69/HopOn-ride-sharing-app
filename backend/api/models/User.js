@@ -27,6 +27,7 @@ const userSchema = new mongoose.Schema({
   verification_notes: { type: String, default: null },
   verified_at: { type: Date, default: null },
   is_banned: { type: Boolean, default: false },
+  fcm_tokens: { type: [String], default: [] },
   created_at: { type: Date, default: Date.now },
   updated_at: { type: Date, default: Date.now }
 });

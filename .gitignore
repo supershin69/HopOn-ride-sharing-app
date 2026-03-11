@@ -20,3 +20,4 @@ GoogleService-Info.plist
 
 # Local/dev scripts with sensitive test data
 backend/api/userSeeder.js
+backend/api/kotlin-messaging-e1bd8-firebase-adminsdk-fbsvc-c3d67ebcc3.json

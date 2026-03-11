@@ -144,6 +144,10 @@
     <string name="ride_ongoing_notification_channel_description">Notifications when your ride starts</string>
     <string name="ride_ongoing_notification_title">Your ride is now ongoing</string>
     <string name="ride_ongoing_notification_body">Tap to view Ride In Process</string>
+    <string name="ride_updates_channel_name">Ride alerts</string>
+    <string name="ride_updates_channel_description">Notifications about ride status and booking updates</string>
+    <string name="ride_updates_notification_title">HopOn update</string>
+    <string name="notification_permission_denied">Notifications are off. You might miss ride updates.</string>
     <string name="ride_in_process_time_countdown_format">%1$s | %2$d min</string>
     <string name="ride_in_process_departing_now">Departing now</string>
     <string name="group_chat">Group Chat</string>

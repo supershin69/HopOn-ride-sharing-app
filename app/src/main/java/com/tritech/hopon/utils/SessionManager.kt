@@ -10,6 +10,8 @@ object SessionManager {
     private const val KEY_TOKEN = "auth_token"
     private const val KEY_REFRESH_TOKEN = "refresh_token"
     private const val KEY_DISPLAY_NAME = "display_name"
+    private const val KEY_PUSH_TOKEN = "push_token"
+    private const val KEY_PENDING_PUSH_TOKEN = "pending_push_token"
 
     fun isLoggedIn(context: Context): Boolean {
         val preferences = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
@@ -26,6 +28,8 @@ object SessionManager {
                     remove(KEY_TOKEN)
                     remove(KEY_REFRESH_TOKEN)
                     remove(KEY_DISPLAY_NAME)
+                    remove(KEY_PUSH_TOKEN)
+                    remove(KEY_PENDING_PUSH_TOKEN)
                 }
             }
             .apply()
@@ -69,5 +73,35 @@ object SessionManager {
     fun setDisplayName(context: Context, name: String) {
         val preferences = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
         preferences.edit().putString(KEY_DISPLAY_NAME, name).apply()
+    }
+
+    fun getPushToken(context: Context): String? {
+        val preferences = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+        return preferences.getString(KEY_PUSH_TOKEN, null)
+    }
+
+    fun setPushToken(context: Context, token: String) {
+        val preferences = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+        preferences.edit().putString(KEY_PUSH_TOKEN, token).apply()
+    }
+
+    fun clearPushToken(context: Context) {
+        val preferences = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+        preferences.edit().remove(KEY_PUSH_TOKEN).apply()
+    }
+
+    fun getPendingPushToken(context: Context): String? {
+        val preferences = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+        return preferences.getString(KEY_PENDING_PUSH_TOKEN, null)
+    }
+
+    fun setPendingPushToken(context: Context, token: String) {
+        val preferences = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+        preferences.edit().putString(KEY_PENDING_PUSH_TOKEN, token).apply()
+    }
+
+    fun clearPendingPushToken(context: Context) {
+        val preferences = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+        preferences.edit().remove(KEY_PENDING_PUSH_TOKEN).apply()
     }
 }

@@ -2,6 +2,7 @@ package com.tritech.hopon.ui.rideDiscovery.core
 
 import retrofit2.http.Body
 import retrofit2.http.GET
+import retrofit2.http.HTTP
 import retrofit2.http.Path
 import retrofit2.http.POST
 import retrofit2.http.PUT
@@ -31,4 +32,14 @@ interface UsersService {
 
     @GET("users/me/verification")
     suspend fun getMyVerification(): ApiVerificationStatus
+
+    @POST("users/me/push-token")
+    suspend fun registerPushToken(
+        @Body request: ApiPushTokenRequest
+    ): ApiPushTokenResponse
+
+    @HTTP(method = "DELETE", path = "users/me/push-token", hasBody = true)
+    suspend fun unregisterPushToken(
+        @Body request: ApiPushTokenRequest
+    ): ApiPushTokenResponse
 }

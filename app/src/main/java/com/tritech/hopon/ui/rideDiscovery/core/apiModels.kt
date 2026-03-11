@@ -80,6 +80,15 @@ data class ApiVerificationStatus(
     val verified_at: String? = null
 )
 
+data class ApiPushTokenRequest(
+    val token: String,
+    val platform: String = "android"
+)
+
+data class ApiPushTokenResponse(
+    val message: String? = null
+)
+
 // ─── Carpool Post (Ride) ──────────────────────────────────────────────────────
 
 /**
